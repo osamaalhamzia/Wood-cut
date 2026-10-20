@@ -1,0 +1,39 @@
+name: Build APK
+on:
+  workflow_dispatch:
+  push:
+    branches: [main, master]
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Generate Android platform files
+        run: |
+          cp -r lib /tmp/lib_bak
+          cp pubspec.yaml /tmp/pubspec_bak.yaml
+          flutter create . --project-name qass_alwah --org com.qass --platforms=android
+          rm -rf lib && cp -r /tmp/lib_bak lib
+          cp /tmp/pubspec_bak.yaml pubspec.yaml
+          rm -rf test
+          sed -i 's/android:label="[^"]*"/android:label="قصّ الألواح"/' android/app/src/main/AndroidManifest.xml
+
+      - run: flutter pub get
+      - run: flutter build apk --release
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: app-release-apk
+          path: build/app/outputs/flutter-apk/app-release.apk
